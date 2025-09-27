@@ -62,144 +62,131 @@
 
           for i, row in enumerate(buttons):
               for j, btn_text in enumerate(row):
-                  self.create_button(button_frame, btn_text, i, j)
+                  btn = tk.Button(
+                      button_frame,
+                      text=btn_text,
+                      font=("Arial", 14),
+                      width=6,
+                      height=2,
+                      command=lambda t=btn_text: self.button_click(t),
+                      bg='#e0e0e0',
+                      activebackground='#d0d0d0'
+                  )
+                  btn.grid(row=i, column=j, padx=2, pady=2)
 
-      def create_button(self, parent, text, row, col):
-          # Button colors
-          if text == '=':
-              bg_color = '#4CAF50'
-              fg_color = 'white'
-          elif text in ['C', '±', '%', '÷', '×', '-', '+', '√']:
-              bg_color = '#2196F3'
-              fg_color = 'white'
-          else:
-              bg_color = '#e0e0e0'
-              fg_color = 'black'
-
-          button = tk.Button(
-              parent,
-              text=text,
-              font=("Arial", 14, "bold"),
-              width=6,
-              height=2,
-              bg=bg_color,
-              fg=fg_color,
-              command=lambda: self.button_click(text)
+          # About button
+          about_btn = tk.Button(
+              self.root,
+              text="About",
+              font=("Arial", 10),
+              command=self.show_about,
+              bg='#cccccc',
+              width=10
           )
-          button.grid(row=row, column=col, padx=3, pady=3)
-
-      def reset_calculator(self):
-          self.first_number = None
-          self.operation = None
-          self.waiting_for_operand = False
+          about_btn.pack(pady=10)
 
       def button_click(self, value):
+          current = self.display_var.get()
+
           if value == 'C':
               self.reset_calculator()
-              self.display_var.set("0")
           elif value == '=':
-              self.calculate()
+              self.calculate_result()
           elif value == '±':
               self.toggle_sign()
-          elif value == '%':
-              self.percentage()
           elif value == '√':
-              self.square_root()
-          elif value in ['÷', '×', '-', '+']:
+              self.calculate_sqrt()
+          elif value == '%':
+              self.calculate_percentage()
+          elif value in ['÷', '×', '+', '-']:
               self.handle_operator(value)
           else:
               self.handle_number(value)
 
-      def handle_number(self, num):
+      def handle_number(self, value):
           current = self.display_var.get()
-
-          if self.waiting_for_operand:
-              if num == '.':
-                  self.display_var.set("0.")
-              else:
-                  self.display_var.set(num)
-              self.waiting_for_operand = False
+          if current == "0" or current == "Error":
+              self.display_var.set(value)
           else:
-              if num == '.' and '.' in current:
-                  return  # Prevent multiple decimals
+              self.display_var.set(current + value)
 
-              if current == "0":
-                  if num == '.':
-                      self.display_var.set("0.")
-                  else:
-                      self.display_var.set(num)
-              else:
-                  self.display_var.set(current + num)
+      def handle_operator(self, operator):
+          try:
+              self.first_number = float(self.display_var.get())
+              self.operator = operator
+              self.display_var.set("0")
+          except ValueError:
+              self.display_var.set("Error")
 
-      def handle_operator(self, op):
-          current_value = float(self.display_var.get())
-
-          if self.first_number is None:
-              self.first_number = current_value
-          elif self.operation and not self.waiting_for_operand:
-              self.calculate()
-              current_value = float(self.display_var.get())
-              self.first_number = current_value
-
-          self.operation = op
-          self.waiting_for_operand = True
-
-      def calculate(self):
-          if self.operation is None or self.first_number is None:
-              return
-
+      def calculate_result(self):
           try:
               second_number = float(self.display_var.get())
-              result = 0
 
-              # Safe calculation - no dynamic code execution
-              if self.operation == '+':
+              if self.operator == '+':
                   result = self.first_number + second_number
-              elif self.operation == '-':
+              elif self.operator == '-':
                   result = self.first_number - second_number
-              elif self.operation == '×':
+              elif self.operator == '×':
                   result = self.first_number * second_number
-              elif self.operation == '÷':
+              elif self.operator == '÷':
                   if second_number == 0:
-                      messagebox.showerror("Error", "Cannot divide by zero")
+                      self.display_var.set("Error")
                       return
                   result = self.first_number / second_number
+              else:
+                  return
 
-              self.display_var.set(str(round(result, 8)))
-              self.first_number = result
-              self.operation = None
-              self.waiting_for_operand = True
+              # Format result
+              if result == int(result):
+                  self.display_var.set(str(int(result)))
+              else:
+                  self.display_var.set(f"{result:.8g}")
 
-          except Exception:
-              messagebox.showerror("Error", "Invalid calculation")
-              self.reset_calculator()
-              self.display_var.set("0")
+          except (ValueError, AttributeError):
+              self.display_var.set("Error")
 
       def toggle_sign(self):
           try:
-              value = float(self.display_var.get())
-              self.display_var.set(str(-value))
-          except:
+              current = float(self.display_var.get())
+              self.display_var.set(str(-current))
+          except ValueError:
               pass
 
-      def percentage(self):
+      def calculate_sqrt(self):
           try:
-              value = float(self.display_var.get())
-              result = value / 100
-              self.display_var.set(str(result))
-          except:
-              pass
-
-      def square_root(self):
-          try:
-              value = float(self.display_var.get())
-              if value < 0:
-                  messagebox.showerror("Error", "Cannot calculate square root of negative number")
+              current = float(self.display_var.get())
+              if current < 0:
+                  self.display_var.set("Error")
               else:
-                  result = math.sqrt(value)
-                  self.display_var.set(str(round(result, 8)))
-          except:
-              messagebox.showerror("Error", "Invalid number")
+                  result = math.sqrt(current)
+                  if result == int(result):
+                      self.display_var.set(str(int(result)))
+                  else:
+                      self.display_var.set(f"{result:.8g}")
+          except ValueError:
+              self.display_var.set("Error")
+
+      def calculate_percentage(self):
+          try:
+              current = float(self.display_var.get())
+              result = current / 100
+              self.display_var.set(str(result))
+          except ValueError:
+              self.display_var.set("Error")
+
+      def reset_calculator(self):
+          self.display_var.set("0")
+          self.first_number = 0
+          self.operator = None
+
+      def show_about(self):
+          messagebox.showinfo(
+              "About",
+              "Simple GUI Calculator\n\n"
+              "Built for GitHub-to-EXE converter testing\n"
+              "Perfect for windowed mode (no console)\n\n"
+              "Features: Basic arithmetic, square root, percentage"
+          )
 
   def main():
       root = tk.Tk()
