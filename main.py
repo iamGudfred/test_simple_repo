@@ -8,7 +8,6 @@
   import tkinter as tk
   from tkinter import messagebox
   import math
-  import operator
 
   class Calculator:
       def __init__(self, root):
@@ -151,27 +150,27 @@
 
           try:
               second_number = float(self.display_var.get())
+              result = 0
 
-              # Safe calculation without eval()
-              operations = {
-                  '+': operator.add,
-                  '-': operator.sub,
-                  '×': operator.mul,
-                  '÷': operator.truediv
-              }
+              # Safe calculation - no dynamic code execution
+              if self.operation == '+':
+                  result = self.first_number + second_number
+              elif self.operation == '-':
+                  result = self.first_number - second_number
+              elif self.operation == '×':
+                  result = self.first_number * second_number
+              elif self.operation == '÷':
+                  if second_number == 0:
+                      messagebox.showerror("Error", "Cannot divide by zero")
+                      return
+                  result = self.first_number / second_number
 
-              if self.operation == '÷' and second_number == 0:
-                  messagebox.showerror("Error", "Cannot divide by zero")
-                  return
-
-              result = operations[self.operation](self.first_number, second_number)
               self.display_var.set(str(round(result, 8)))
-
               self.first_number = result
               self.operation = None
               self.waiting_for_operand = True
 
-          except Exception as e:
+          except Exception:
               messagebox.showerror("Error", "Invalid calculation")
               self.reset_calculator()
               self.display_var.set("0")
