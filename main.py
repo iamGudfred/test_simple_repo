@@ -19,8 +19,8 @@ class Calculator:
         # Configure style
         self.root.configure(bg='#f0f0f0')
 
+        self.create_widgets()  # Moved before reset_calculator
         self.reset_calculator()
-        self.create_widgets()
 
     def create_widgets(self):
         # Title
