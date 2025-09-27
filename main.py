@@ -8,19 +8,20 @@
   import tkinter as tk
   from tkinter import messagebox
   import math
+  import operator
 
   class Calculator:
       def __init__(self, root):
           self.root = root
           self.root.title("Simple GUI Calculator")
-          self.root.geometry("350x450")  # Made taller
+          self.root.geometry("350x450")
           self.root.resizable(False, False)
 
           # Configure style
           self.root.configure(bg='#f0f0f0')
 
           self.create_widgets()
-          self.current_expression = ""
+          self.reset_calculator()
 
       def create_widgets(self):
           # Title
@@ -51,7 +52,7 @@
           button_frame = tk.Frame(self.root, bg='#f0f0f0')
           button_frame.pack(pady=10)
 
-          # Button layout - Fixed layout
+          # Button layout
           buttons = [
               ['C', '±', '%', '÷'],
               ['7', '8', '9', '×'],
@@ -80,7 +81,7 @@
               parent,
               text=text,
               font=("Arial", 14, "bold"),
-              width=6,  # Made buttons wider
+              width=6,
               height=2,
               bg=bg_color,
               fg=fg_color,
@@ -88,9 +89,14 @@
           )
           button.grid(row=row, column=col, padx=3, pady=3)
 
+      def reset_calculator(self):
+          self.first_number = None
+          self.operation = None
+          self.waiting_for_operand = False
+
       def button_click(self, value):
           if value == 'C':
-              self.current_expression = ""
+              self.reset_calculator()
               self.display_var.set("0")
           elif value == '=':
               self.calculate()
@@ -106,60 +112,93 @@
               self.handle_number(value)
 
       def handle_number(self, num):
-          if self.current_expression == "0":
-              self.current_expression = num
+          current = self.display_var.get()
+
+          if self.waiting_for_operand:
+              if num == '.':
+                  self.display_var.set("0.")
+              else:
+                  self.display_var.set(num)
+              self.waiting_for_operand = False
           else:
-              self.current_expression += num
-          self.display_var.set(self.current_expression)
+              if num == '.' and '.' in current:
+                  return  # Prevent multiple decimals
+
+              if current == "0":
+                  if num == '.':
+                      self.display_var.set("0.")
+                  else:
+                      self.display_var.set(num)
+              else:
+                  self.display_var.set(current + num)
 
       def handle_operator(self, op):
-          if self.current_expression and self.current_expression[-1] not in '+-*/':
-              # Convert display operators to Python operators
-              op_map = {'÷': '/', '×': '*'}
-              python_op = op_map.get(op, op)
-              self.current_expression += python_op
-              self.display_var.set(self.current_expression)
+          current_value = float(self.display_var.get())
+
+          if self.first_number is None:
+              self.first_number = current_value
+          elif self.operation and not self.waiting_for_operand:
+              self.calculate()
+              current_value = float(self.display_var.get())
+              self.first_number = current_value
+
+          self.operation = op
+          self.waiting_for_operand = True
 
       def calculate(self):
+          if self.operation is None or self.first_number is None:
+              return
+
           try:
-              # Simple and safe evaluation
-              result = eval(self.current_expression)
-              self.current_expression = str(round(result, 8))
-              self.display_var.set(self.current_expression)
-          except Exception:
+              second_number = float(self.display_var.get())
+
+              # Safe calculation without eval()
+              operations = {
+                  '+': operator.add,
+                  '-': operator.sub,
+                  '×': operator.mul,
+                  '÷': operator.truediv
+              }
+
+              if self.operation == '÷' and second_number == 0:
+                  messagebox.showerror("Error", "Cannot divide by zero")
+                  return
+
+              result = operations[self.operation](self.first_number, second_number)
+              self.display_var.set(str(round(result, 8)))
+
+              self.first_number = result
+              self.operation = None
+              self.waiting_for_operand = True
+
+          except Exception as e:
               messagebox.showerror("Error", "Invalid calculation")
-              self.current_expression = ""
+              self.reset_calculator()
               self.display_var.set("0")
 
       def toggle_sign(self):
           try:
-              if self.current_expression:
-                  value = float(self.current_expression)
-                  self.current_expression = str(-value)
-                  self.display_var.set(self.current_expression)
+              value = float(self.display_var.get())
+              self.display_var.set(str(-value))
           except:
               pass
 
       def percentage(self):
           try:
-              if self.current_expression:
-                  value = float(self.current_expression)
-                  result = value / 100
-                  self.current_expression = str(result)
-                  self.display_var.set(self.current_expression)
+              value = float(self.display_var.get())
+              result = value / 100
+              self.display_var.set(str(result))
           except:
               pass
 
       def square_root(self):
           try:
-              if self.current_expression:
-                  value = float(self.current_expression)
-                  if value < 0:
-                      messagebox.showerror("Error", "Cannot calculate square root of negative number")
-                  else:
-                      result = math.sqrt(value)
-                      self.current_expression = str(result)
-                      self.display_var.set(self.current_expression)
+              value = float(self.display_var.get())
+              if value < 0:
+                  messagebox.showerror("Error", "Cannot calculate square root of negative number")
+              else:
+                  result = math.sqrt(value)
+                  self.display_var.set(str(round(result, 8)))
           except:
               messagebox.showerror("Error", "Invalid number")
 
